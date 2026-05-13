@@ -321,8 +321,8 @@ function saveAuth() { localStorage.setItem('sup_auth', JSON.stringify(AUTH)); }
 function clearAuth() { localStorage.removeItem('sup_auth'); AUTH = { token: null, user: null }; }
 
 // ===== API =====
-function apiGet(endpoint, token) {
-  var url = GAS_URL + '?api=' + endpoint + (token ? '&token=' + encodeURIComponent(token) : '');
+function apiGet(endpoint, token, extra) {
+  var url = GAS_URL + '?api=' + endpoint + (token ? '&token=' + encodeURIComponent(token) : '') + (extra ? '&' + extra : '');
   return fetch(url).then(function(r){ return r.json(); });
 }
 
@@ -584,7 +584,7 @@ function findWdByCode() {
 }
 
 function openWithdrawForm(itemId) {
-  apiGet('item', AUTH.token).then(function(res){
+  apiGet('item', AUTH.token, 'item_id=' + itemId).then(function(res){
     if (!res.success) { showToast('ไม่พบรายการ', 'error'); return; }
     var item = res.data;
     var body = '<div class="form-group"><label class="form-label">ชื่อวัสดุ</label><input class="form-input" value="' + esc(item.name) + '" readonly></div>';
