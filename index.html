@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>สแกน QR Code — ระบบเบิกวัสดุ</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
+    background: #141d52;
+    color: #fff;
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  #cameraView {
+    flex: 1;
+    position: relative;
+    background: #000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  #overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+  .scan-frame {
+    width: 240px;
+    height: 240px;
+    border: 3px solid rgba(255,255,255,0.6);
+    border-radius: 1.5rem;
+    position: relative;
+    box-shadow: 0 0 0 9999px rgba(0,0,0,0.5);
+  }
+  .scan-frame::before, .scan-frame::after {
+    content: '';
+    position: absolute;
+    width: 24px; height: 24px;
+    border-color: #3b82f6;
+    border-style: solid;
+  }
+  .scan-frame::before { top: -3px; left: -3px; border-width: 4px 0 0 4px; border-radius: 1rem 0 0 0; }
+  .scan-frame::after { bottom: -3px; right: -3px; border-width: 0 4px 4px 0; border-radius: 0 0 1rem 0; }
+  .laser {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, transparent, #3b82f6, transparent);
+    animation: scan 2s linear infinite;
+    opacity: 0.8;
+  }
+  @keyframes scan {
+    0% { top: 0; opacity: 0; }
+    10% { opacity: 1; }
+    90% { opacity: 1; }
+    100% { top: 100%; opacity: 0; }
+  }
+  #statusBar {
+    padding: 0.75rem 1rem;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(8px);
+    text-align: center;
+    font-size: 0.875rem;
+  }
+  #statusBar.error { background: rgba(220,38,38,0.8); }
+  #statusBar.success { background: rgba(22,163,74,0.8); }
+  .btn {
+    background: #1e2d8f;
+    color: #fff;
+    border: none;
+    padding: 0.6rem 1.5rem;
+    border-radius: 0.75rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 0.5rem;
+  }
+  .btn-secondary {
+    background: rgba(255,255,255,0.15);
+    margin-left: 0.5rem;
+  }
+  #startScreen {
+    position: fixed;
+    inset: 0;
+    background: #141d52;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    gap: 1rem;
+    padding: 2rem;
+    text-align: center;
+  }
+  #startScreen h2 { font-size: 1.25rem; margin-bottom: 0.5rem; }
+  #startScreen p { color: #93c5fd; font-size: 0.875rem; }
+</style>
+</head>
+<body>
+
+<div id="startScreen">
+  <div style="font-size:3rem;">📷</div>
+  <h2>สแกน QR Code เบิกวัสดุ</h2>
+  <p>กดปุ่มด้านล่างเพื่อเปิดกล้อง<br>และสแกน QR บนป้ายวัสดุ</p>
+  <button class="btn" onclick="startCamera()">เปิดกล้อง</button>
+</div>
+
+<div id="cameraView" style="display:none;">
+  <video id="video" autoplay playsinline muted></video>
+  <div id="overlay">
+    <div class="scan-frame"><div class="laser"></div></div>
+  </div>
+</div>
+
+<div id="statusBar">กำลังรอเปิดกล้อง...</div>
+
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+<script>
+// ============ CONFIG ============
+// เปลี่ยนเป็น URL Web App จริงของคุณ
+var GAS_APP_URL = 'https://script.google.com/macros/s/AKfycbxRwxGGW3fxIB0rKRIU2zh9lEo_yUTVEcW6cWAqMF4YYJBvu0YxCXfy6mUbj8ihTyaRXQ/exec';
+// =================================
+
+var video = document.getElementById('video');
+var statusBar = document.getElementById('statusBar');
+var cameraView = document.getElementById('cameraView');
+var startScreen = document.getElementById('startScreen');
+var stream = null;
+var scanning = false;
+
+function setStatus(text, type) {
+  statusBar.textContent = text;
+  statusBar.className = type || '';
+}
+
+async function startCamera() {
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+    });
+    video.srcObject = stream;
+    await video.play();
+    startScreen.style.display = 'none';
+    cameraView.style.display = 'flex';
+    setStatus('กำลังสแกน... จัด QR ให้อยู่ในกรอบ');
+    scanning = true;
+    tick();
+  } catch (err) {
+    setStatus('ไม่สามารถเปิดกล้องได้: ' + err.message, 'error');
+    alert('กรุณาอนุญาติการใช้งานกล้อง หรือลองใช้ Chrome บน Android/iPhone');
+  }
+}
+
+function tick() {
+  if (!scanning || video.readyState !== video.HAVE_ENOUGH_DATA) {
+    requestAnimationFrame(tick);
+    return;
+  }
+  var canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  var ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  var code = jsQR(imageData.data, imageData.width, imageData.height, {
+    inversionAttempts: 'attemptBoth'
+  });
+  if (code && code.data) {
+    handleScan(code.data);
+    return;
+  }
+  requestAnimationFrame(tick);
+}
+
+function handleScan(text) {
+  scanning = false;
+  // ดึง item_id จาก URL
+  var m1 = text.match(/[?&]w=([a-f0-9\-]+)/i);
+  var m2 = text.match(/[?&]item_id=([a-f0-9\-]+)/i);
+  var itemId = (m1 ? m1[1] : null) || (m2 ? m2[1] : null);
+  if (itemId) {
+    setStatus('พบ QR Code! กำลังเปิด...', 'success');
+    stopCamera();
+    // Redirect ไป GAS Web App พร้อม item_id
+    var url = GAS_APP_URL + '?w=' + encodeURIComponent(itemId);
+    window.location.href = url;
+  } else {
+    setStatus('QR ไม่ถูกต้อง กรุณาลองใหม่', 'error');
+    setTimeout(function(){ scanning = true; tick(); }, 1500);
+  }
+}
+
+function stopCamera() {
+  if (stream) {
+    stream.getTracks().forEach(function(t){ t.stop(); });
+    stream = null;
+  }
+  video.srcObject = null;
+}
+
+// ปิดกล้องเมื่อออกจากหน้า
+window.addEventListener('beforeunload', stopCamera);
+</script>
+
+</body>
+</html>
