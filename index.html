@@ -3,215 +3,291 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>สแกน QR Code — ระบบเบิกวัสดุ</title>
+<title>เบิกวัสดุ — ระบบคลังวัสดุ</title>
 <style>
+  @import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;500;600;700&display=swap');
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    font-family: 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif;
-    background: #141d52;
-    color: #fff;
-    height: 100vh;
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-  #cameraView {
-    flex: 1;
-    position: relative;
-    background: #000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-  video {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }
-  #overlay {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-  }
-  .scan-frame {
-    width: 240px;
-    height: 240px;
-    border: 3px solid rgba(255,255,255,0.6);
-    border-radius: 1.5rem;
-    position: relative;
-    box-shadow: 0 0 0 9999px rgba(0,0,0,0.5);
-  }
-  .scan-frame::before, .scan-frame::after {
-    content: '';
-    position: absolute;
-    width: 24px; height: 24px;
-    border-color: #3b82f6;
-    border-style: solid;
-  }
-  .scan-frame::before { top: -3px; left: -3px; border-width: 4px 0 0 4px; border-radius: 1rem 0 0 0; }
-  .scan-frame::after { bottom: -3px; right: -3px; border-width: 0 4px 4px 0; border-radius: 0 0 1rem 0; }
-  .laser {
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 2px;
-    background: linear-gradient(90deg, transparent, #3b82f6, transparent);
-    animation: scan 2s linear infinite;
-    opacity: 0.8;
-  }
-  @keyframes scan {
-    0% { top: 0; opacity: 0; }
-    10% { opacity: 1; }
-    90% { opacity: 1; }
-    100% { top: 100%; opacity: 0; }
-  }
-  #statusBar {
-    padding: 0.75rem 1rem;
-    background: rgba(0,0,0,0.7);
-    backdrop-filter: blur(8px);
-    text-align: center;
-    font-size: 0.875rem;
-  }
-  #statusBar.error { background: rgba(220,38,38,0.8); }
-  #statusBar.success { background: rgba(22,163,74,0.8); }
-  .btn {
-    background: #1e2d8f;
-    color: #fff;
-    border: none;
-    padding: 0.6rem 1.5rem;
-    border-radius: 0.75rem;
-    font-size: 0.875rem;
-    font-weight: 600;
-    cursor: pointer;
-    margin-top: 0.5rem;
-  }
-  .btn-secondary {
-    background: rgba(255,255,255,0.15);
-    margin-left: 0.5rem;
-  }
-  #startScreen {
-    position: fixed;
-    inset: 0;
-    background: #141d52;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    z-index: 50;
-    gap: 1rem;
-    padding: 2rem;
-    text-align: center;
-  }
-  #startScreen h2 { font-size: 1.25rem; margin-bottom: 0.5rem; }
-  #startScreen p { color: #93c5fd; font-size: 0.875rem; }
+  body { font-family: 'Sarabun', -apple-system, BlinkMacSystemFont, sans-serif; background: #f8fafc; color: #334155; min-height: 100vh; }
+  .header { background: #141d52; color: #fff; padding: 1rem; text-align: center; position: sticky; top: 0; z-index: 10; box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
+  .header h1 { font-size: 1.125rem; font-weight: 700; }
+  .header p { font-size: 0.75rem; color: #93c5fd; margin-top: 0.25rem; }
+  .container { max-width: 640px; margin: 0 auto; padding: 1rem; }
+  .toolbar { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; }
+  .search-wrap { position: relative; flex: 1; }
+  .search-wrap i { position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); color: #94a3b8; font-style: normal; }
+  .search-input { width: 100%; padding: 0.625rem 0.75rem 0.625rem 2.25rem; border: 1px solid #e2e8f0; border-radius: 0.75rem; font-size: 0.875rem; outline: none; }
+  .search-input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+  .btn { border: none; border-radius: 0.75rem; padding: 0.625rem 1rem; font-size: 0.875rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 0.375rem; white-space: nowrap; }
+  .btn-primary { background: #1e2d8f; color: #fff; }
+  .btn-secondary { background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0; }
+  .btn-teal { background: #f0fdfa; color: #0f766e; border: 1px solid #ccfbf1; }
+  .code-row { display: flex; gap: 0.5rem; margin-bottom: 0.75rem; }
+  .code-input { flex: 1; padding: 0.625rem 0.875rem; border: 1px solid #e2e8f0; border-radius: 0.75rem; font-size: 0.875rem; }
+  .loading { text-align: center; padding: 2rem; color: #64748b; }
+  .error { text-align: center; padding: 1.5rem; color: #dc2626; background: #fef2f2; border-radius: 0.75rem; margin-bottom: 0.75rem; }
+  .item { background: #fff; border-radius: 0.875rem; padding: 0.875rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.75rem; box-shadow: 0 1px 2px rgba(0,0,0,0.05); cursor: pointer; transition: box-shadow 0.15s; }
+  .item:active { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+  .item-img { width: 48px; height: 48px; border-radius: 0.625rem; object-fit: cover; flex-shrink: 0; background: #f1f5f9; }
+  .item-img-placeholder { width: 48px; height: 48px; border-radius: 0.625rem; background: #e2e8f0; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; flex-shrink: 0; }
+  .item-body { flex: 1; min-width: 0; }
+  .item-name { font-weight: 600; font-size: 0.9375rem; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .item-meta { font-size: 0.75rem; color: #64748b; margin-top: 0.125rem; }
+  .badge { padding: 0.25rem 0.625rem; border-radius: 999px; font-size: 0.6875rem; font-weight: 600; flex-shrink: 0; }
+  .badge-ok { background: #dcfce7; color: #166534; }
+  .badge-low { background: #fef3c7; color: #92400e; }
+  .badge-empty { background: #fee2e2; color: #991b1b; }
+  .empty { text-align: center; padding: 2rem; color: #94a3b8; font-size: 0.875rem; }
+  .count { font-size: 0.75rem; color: #64748b; margin-bottom: 0.5rem; padding: 0 0.25rem; }
+  /* Camera */
+  #cameraModal { display: none; position: fixed; inset: 0; background: #000; z-index: 50; flex-direction: column; }
+  #cameraModal video { width: 100%; flex: 1; object-fit: cover; }
+  .camera-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .scan-box { width: 240px; height: 240px; border: 3px solid rgba(255,255,255,0.5); border-radius: 1.25rem; position: relative; box-shadow: 0 0 0 9999px rgba(0,0,0,0.45); }
+  .scan-line { position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, #3b82f6, transparent); animation: scan 2.2s linear infinite; }
+  @keyframes scan { 0% { top: 0; opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } 100% { top: 100%; opacity: 0; } }
+  .camera-bar { position: absolute; bottom: 0; left: 0; right: 0; padding: 1.25rem; display: flex; justify-content: center; background: linear-gradient(transparent, rgba(0,0,0,0.6)); }
+  .camera-btn { background: rgba(255,255,255,0.15); color: #fff; border: 1px solid rgba(255,255,255,0.3); padding: 0.625rem 1.5rem; border-radius: 999px; font-size: 0.875rem; }
+  .toast { position: fixed; bottom: 1rem; left: 50%; transform: translateX(-50%); background: #1e293b; color: #fff; padding: 0.75rem 1.25rem; border-radius: 0.75rem; font-size: 0.875rem; z-index: 60; display: none; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+  .toast.error { background: #dc2626; }
+  .toast.success { background: #16a34a; }
 </style>
 </head>
 <body>
 
-<div id="startScreen">
-  <div style="font-size:3rem;">📷</div>
-  <h2>สแกน QR Code เบิกวัสดุ</h2>
-  <p>กดปุ่มด้านล่างเพื่อเปิดกล้อง<br>และสแกน QR บนป้ายวัสดุ</p>
-  <button class="btn" onclick="startCamera()">เปิดกล้อง</button>
+<div class="header">
+  <h1>เบิกวัสดุ</h1>
+  <p>เลือกรายการหรือสแกน QR Code เพื่อเบิก</p>
 </div>
 
-<div id="cameraView" style="display:none;">
+<div class="container">
+  <!-- Search + QR -->
+  <div class="toolbar">
+    <div class="search-wrap">
+      <i>&#128269;</i>
+      <input type="text" id="search" class="search-input" placeholder="ค้นหาวัสดุ..." oninput="filterItems()">
+    </div>
+    <button class="btn btn-teal" onclick="openCamera()">&#128247; ถ่าย</button>
+    <button class="btn btn-secondary" onclick="openGallery()">&#127748; แกลเลอรี</button>
+  </div>
+
+  <!-- Manual code -->
+  <div class="code-row">
+    <input type="text" id="codeInput" class="code-input" placeholder="หรือพิมพ์รหัส SUP-xxx" onkeypress="if(event.key==='Enter')findByCode()">
+    <button class="btn btn-primary" onclick="findByCode()">&#128269; ค้นหา</button>
+  </div>
+
+  <input type="file" id="galleryInput" accept="image/*" style="display:none" onchange="handleFile(this)">
+
+  <div id="count" class="count"></div>
+  <div id="list"></div>
+</div>
+
+<!-- Camera Modal -->
+<div id="cameraModal">
   <video id="video" autoplay playsinline muted></video>
-  <div id="overlay">
-    <div class="scan-frame"><div class="laser"></div></div>
+  <div class="camera-overlay">
+    <div class="scan-box"><div class="scan-line"></div></div>
+  </div>
+  <div class="camera-bar">
+    <button class="camera-btn" onclick="stopCamera()">&#10005; ปิดกล้อง</button>
   </div>
 </div>
 
-<div id="statusBar">กำลังรอเปิดกล้อง...</div>
+<div id="toast" class="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script>
-// ============ CONFIG ============
-// เปลี่ยนเป็น URL Web App จริงของคุณ
-var GAS_APP_URL = 'https://script.google.com/macros/s/AKfycbxRwxGGW3fxIB0rKRIU2zh9lEo_yUTVEcW6cWAqMF4YYJBvu0YxCXfy6mUbj8ihTyaRXQ/exec';
-// =================================
+// ==================== CONFIG ====================
+var GAS_URL = 'https://script.google.com/macros/s/AKfycbxRwxGGW3fxIB0rKRIU2zh9lEo_yUTVEcW6cWAqMF4YYJBvu0YxCXfy6mUbj8ihTyaRXQ/exec';
+// ================================================
 
-var video = document.getElementById('video');
-var statusBar = document.getElementById('statusBar');
-var cameraView = document.getElementById('cameraView');
-var startScreen = document.getElementById('startScreen');
+var allItems = [];
+var filteredItems = [];
 var stream = null;
 var scanning = false;
 
-function setStatus(text, type) {
-  statusBar.textContent = text;
-  statusBar.className = type || '';
+// Load items from GAS
+function loadItems() {
+  showList('<div class="loading">&#9203; กำลังโหลดรายการ...</div>');
+  fetch(GAS_URL + '?api=items')
+    .then(function(r){ return r.json(); })
+    .then(function(res){
+      if (res.success && res.data) {
+        allItems = res.data;
+        filteredItems = allItems;
+        renderItems(filteredItems);
+      } else {
+        showList('<div class="error">&#9888; โหลดรายการไม่สำเร็จ</div>');
+      }
+    })
+    .catch(function(err){
+      console.error(err);
+      showList('<div class="error">&#9888; ไม่สามารถเชื่อมต่อระบบได้<br><small style="color:#64748b">' + err.message + '</small></div>');
+    });
 }
 
-async function startCamera() {
-  try {
-    stream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
-    });
-    video.srcObject = stream;
-    await video.play();
-    startScreen.style.display = 'none';
-    cameraView.style.display = 'flex';
-    setStatus('กำลังสแกน... จัด QR ให้อยู่ในกรอบ');
-    scanning = true;
-    tick();
-  } catch (err) {
-    setStatus('ไม่สามารถเปิดกล้องได้: ' + err.message, 'error');
-    alert('กรุณาอนุญาติการใช้งานกล้อง หรือลองใช้ Chrome บน Android/iPhone');
+function renderItems(data) {
+  document.getElementById('count').textContent = 'พบ ' + data.length + ' รายการ';
+  if (data.length === 0) {
+    showList('<div class="empty">&#128230; ไม่พบรายการวัสดุ</div>');
+    return;
   }
+  var html = data.map(function(i){
+    var stock = parseInt(i.current_stock) || 0;
+    var minStock = parseInt(i.min_stock) || 5;
+    var badgeClass, badgeText;
+    if (stock === 0) { badgeClass = 'badge-empty'; badgeText = 'หมด'; }
+    else if (stock <= minStock) { badgeClass = 'badge-low'; badgeText = 'ใกล้หมด'; }
+    else { badgeClass = 'badge-ok'; badgeText = 'ปกติ'; }
+    var img = i.image_file_id
+      ? '<img src="https://drive.google.com/thumbnail?id=' + i.image_file_id + '&sz=w200-h200" class="item-img" onerror="this.style.display=\'none\';this.parentElement.innerHTML=\'<div class=item-img-placeholder>&#128230;</div>\'">'
+      : '<div class="item-img-placeholder">&#128230;</div>';
+    return '<div class="item" onclick="selectItem(\'' + i.id + '\')">'
+      + img
+      + '<div class="item-body">'
+      + '<div class="item-name">' + esc(i.name) + '</div>'
+      + '<div class="item-meta">' + esc(i.item_code||'') + ' &bull; ' + esc(i.size||'') + ' &bull; ' + stock + ' ' + esc(i.unit||'') + '</div>'
+      + '</div>'
+      + '<span class="badge ' + badgeClass + '">' + badgeText + '</span>'
+      + '</div>';
+  }).join('');
+  showList(html);
+}
+
+function filterItems() {
+  var q = document.getElementById('search').value.trim().toLowerCase();
+  filteredItems = allItems.filter(function(i){
+    return (i.name||'').toLowerCase().includes(q) || (i.item_code||'').toLowerCase().includes(q);
+  });
+  renderItems(filteredItems);
+}
+
+function findByCode() {
+  var code = document.getElementById('codeInput').value.trim().toUpperCase();
+  if (!code) return;
+  var item = allItems.find(function(i){ return (i.item_code||'').toUpperCase() === code; });
+  if (item) selectItem(item.id);
+  else showToast('ไม่พบรหัส ' + code, 'error');
+}
+
+function selectItem(id) {
+  window.location.href = GAS_URL + '?w=' + encodeURIComponent(id);
+}
+
+function esc(s) {
+  return (s || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+function showList(html) {
+  document.getElementById('list').innerHTML = html;
+}
+function showToast(msg, type) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast ' + (type||'');
+  t.style.display = 'block';
+  setTimeout(function(){ t.style.display = 'none'; }, 2500);
+}
+
+// ==================== QR CAMERA ====================
+function openCamera() {
+  navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+    .then(function(s){
+      stream = s;
+      document.getElementById('video').srcObject = s;
+      document.getElementById('cameraModal').style.display = 'flex';
+      scanning = true;
+      tick();
+    })
+    .catch(function(err){
+      showToast('ไม่สามารถเปิดกล้องได้: ' + err.message, 'error');
+    });
+}
+
+function openGallery() {
+  document.getElementById('galleryInput').click();
+}
+
+function handleFile(input) {
+  var file = input.files[0];
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function(e){
+    var img = new Image();
+    img.onload = function(){
+      var code = tryDecodeQr(img);
+      if (code && code.data) {
+        var m = code.data.match(/[?&]w=([a-f0-9\-]+)/i) || code.data.match(/[?&]item_id=([a-f0-9\-]+)/i);
+        if (m) selectItem(m[1]);
+        else showToast('QR ไม่ถูกต้อง', 'error');
+      } else {
+        showToast('ไม่สามารถอ่าน QR ได้ ลองเลือกรูปที่ชัดกว่า', 'error');
+      }
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+  input.value = '';
+}
+
+function tryDecodeQr(img) {
+  var scales = [1, 0.75, 1.25, 0.5, 1.5, 0.4, 2];
+  for (var s = 0; s < scales.length; s++) {
+    var w = Math.round(img.width * scales[s]);
+    var h = Math.round(img.height * scales[s]);
+    var canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = h;
+    var ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, w, h);
+    var imageData = ctx.getImageData(0, 0, w, h);
+    var data = imageData.data;
+    var sum = 0;
+    for (var i = 0; i < data.length; i += 4) {
+      sum += 0.299*data[i] + 0.587*data[i+1] + 0.114*data[i+2];
+    }
+    var avg = sum / (data.length / 4);
+    var darkT = Math.max(avg - 60, 80);
+    var lightT = Math.min(avg + 60, 220);
+    for (var i = 0; i < data.length; i += 4) {
+      var gray = 0.299*data[i] + 0.587*data[i+1] + 0.114*data[i+2];
+      var val = gray < darkT ? 0 : (gray > lightT ? 255 : gray);
+      data[i] = data[i+1] = data[i+2] = val;
+    }
+    var code = jsQR(data, w, h, { inversionAttempts: 'attemptBoth' });
+    if (code && code.data) return code;
+  }
+  return null;
 }
 
 function tick() {
-  if (!scanning || video.readyState !== video.HAVE_ENOUGH_DATA) {
-    requestAnimationFrame(tick);
-    return;
-  }
-  var canvas = document.createElement('canvas');
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  var ctx = canvas.getContext('2d');
-  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-  var imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  var code = jsQR(imageData.data, imageData.width, imageData.height, {
-    inversionAttempts: 'attemptBoth'
-  });
-  if (code && code.data) {
-    handleScan(code.data);
-    return;
+  if (!scanning) return;
+  var video = document.getElementById('video');
+  if (video.readyState === video.HAVE_ENOUGH_DATA) {
+    var canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    var ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0);
+    var imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    var code = jsQR(imgData.data, canvas.width, canvas.height, { inversionAttempts: 'attemptBoth' });
+    if (code && code.data) {
+      var m = code.data.match(/[?&]w=([a-f0-9\-]+)/i) || code.data.match(/[?&]item_id=([a-f0-9\-]+)/i);
+      if (m) { stopCamera(); selectItem(m[1]); return; }
+    }
   }
   requestAnimationFrame(tick);
 }
 
-function handleScan(text) {
-  scanning = false;
-  // ดึง item_id จาก URL
-  var m1 = text.match(/[?&]w=([a-f0-9\-]+)/i);
-  var m2 = text.match(/[?&]item_id=([a-f0-9\-]+)/i);
-  var itemId = (m1 ? m1[1] : null) || (m2 ? m2[1] : null);
-  if (itemId) {
-    setStatus('พบ QR Code! กำลังเปิด...', 'success');
-    stopCamera();
-    // Redirect ไป GAS Web App พร้อม item_id
-    var url = GAS_APP_URL + '?w=' + encodeURIComponent(itemId);
-    window.location.href = url;
-  } else {
-    setStatus('QR ไม่ถูกต้อง กรุณาลองใหม่', 'error');
-    setTimeout(function(){ scanning = true; tick(); }, 1500);
-  }
-}
-
 function stopCamera() {
-  if (stream) {
-    stream.getTracks().forEach(function(t){ t.stop(); });
-    stream = null;
-  }
-  video.srcObject = null;
+  scanning = false;
+  if (stream) { stream.getTracks().forEach(function(t){ t.stop(); }); stream = null; }
+  document.getElementById('video').srcObject = null;
+  document.getElementById('cameraModal').style.display = 'none';
 }
 
-// ปิดกล้องเมื่อออกจากหน้า
 window.addEventListener('beforeunload', stopCamera);
+
+// Init
+loadItems();
 </script>
 
 </body>
